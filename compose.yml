@@ -1,0 +1,35 @@
+# docker compose up --build -d  で寝る前に起動
+# docker logs -f Docker_Linux   で進捗確認
+# docker compose down           でコンテナ削除
+
+services:
+  linux:
+    env_file: .env
+
+    container_name: ${CONTAINER_NAME}
+    hostname: ${CONTAINER_NAME}
+
+    build:
+      context: ${Dockerfile_DIR}
+      dockerfile: ${Dockerfile}
+      args:
+        WS:          ${WS}
+        ENTRY_POINT: ${ENTRY_POINT}
+        LANG:        ${LANG}
+
+    volumes:
+      - ${VOLUME}:/${WS}   # ホスト ./build → コンテナ内 /build
+
+    privileged: true        # mount / chroot に必須
+    pid: host               # partprobe 等カーネル操作に必要
+
+    restart: no             # ビルド完了後に自動再起動しない
+
+    stop_grace_period: 12h  # 長時間ビルドを途中で止めない
+
+    environment:
+      - TZ=${TIME_ZONE}
+      - LANG=${LANG}
+
+    command:
+      - /${WS}/${ENTRY_POINT}

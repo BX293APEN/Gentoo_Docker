@@ -1,0 +1,2 @@
+# Gentoo Linux ビルド
+寝ている間にdocker又はUbuntuでGentooをビルドしてしまおう

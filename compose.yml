@@ -5,6 +5,7 @@
 services:
   linux:
     env_file: .env
+    cpus: 4
 
     container_name: ${CONTAINER_NAME}
     hostname: ${CONTAINER_NAME}

@@ -6,6 +6,7 @@
 FROM ubuntu:24.04
 
 ARG WS
+ARG ENTRY_DIR
 ARG ENTRY_POINT
 ARG LANG
 
@@ -27,12 +28,16 @@ RUN apt update && \
         language-pack-ja \
         grep \
         perl && \
-    mkdir -p /${WS} && \
+    mkdir -p /${WS} /${ENTRY_DIR}&& \
+    chmod 777 /${WS} &&\
+    chmod 777 /${ENTRY_DIR} &&\
     update-locale LANG=${LANG} && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
-COPY ${ENTRY_POINT} /${WS}/${ENTRY_POINT}
-RUN chmod +x /${WS}/${ENTRY_POINT}
+
+
+COPY ${ENTRY_POINT} /${ENTRY_DIR}/${ENTRY_POINT}
+RUN chmod +x /${ENTRY_DIR}/${ENTRY_POINT}
 
 WORKDIR /${WS}

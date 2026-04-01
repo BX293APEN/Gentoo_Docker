@@ -14,6 +14,7 @@ services:
       dockerfile: ${Dockerfile}
       args:
         WS:          ${WS}
+        ENTRY_DIR:   ${ENTRY_DIR}
         ENTRY_POINT: ${ENTRY_POINT}
         LANG:        ${LANG}
 
@@ -32,4 +33,4 @@ services:
       - LANG=${LANG}
 
     command:
-      - /${WS}/${ENTRY_POINT}
+      - /${ENTRY_DIR}/${ENTRY_POINT}

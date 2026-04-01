@@ -14,7 +14,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y --no-install-recommends \
+    apt install -y \
         wget \
         curl \
         tar \
@@ -31,9 +31,7 @@ RUN apt update && \
     mkdir -p /${WS} /${ENTRY_DIR}&& \
     chmod 777 /${WS} &&\
     chmod 777 /${ENTRY_DIR} &&\
-    update-locale LANG=${LANG} && \
-    apt clean && \
-    rm -rf /var/lib/apt/lists/*
+    update-locale LANG=${LANG}
 
 
 

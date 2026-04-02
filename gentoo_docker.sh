@@ -161,12 +161,12 @@ if [[ ! -f "/etc/portage/repos.conf" ]]; then
     emerge-webrsync
 fi
 
-if [[ ! -f "$UPDATE_FLAG" ]]; then
+if [[ ! -f "__UPDATE_FLAG__" ]]; then
     echo "[CHROOT] emerge --sync (完全更新)"
     emerge --sync
 fi
 
-date '+%Y-%m-%d %H:%M:%S' > "$UPDATE_FLAG"
+date '+%Y-%m-%d %H:%M:%S' > "__UPDATE_FLAG__"
 
 echo "[CHROOT] プロファイル設定"
 PROFILE_NUM=$(eselect profile list \
@@ -259,6 +259,7 @@ sed -i \
     -e "s|__TZ__|${TZ}|g" \
     -e "s|__LOCALE__|${LOCALE}|g" \
     -e "s|__LOCALE_NAME__|${LOCALE_NAME}|g" \
+    -e "s|__UPDATE_FLAG__|${UPDATE_FLAG}|g" \
     "${BUILD_DIR}/tmp/inside-chroot.sh"
 
 chmod +x "${BUILD_DIR}/tmp/inside-chroot.sh"

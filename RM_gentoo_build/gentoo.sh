@@ -124,7 +124,7 @@ echo "[CHROOT] emerge-webrsync"
 emerge-webrsync
 
 echo "[CHROOT] プロファイル設定"
-eselect profile set default/linux/amd64/17.1
+eselect profile set default/linux/amd64/23.0
 
 echo "[CHROOT] @world アップデート（最長工程）"
 emerge --verbose --update --deep --newuse --with-bdeps=y @world

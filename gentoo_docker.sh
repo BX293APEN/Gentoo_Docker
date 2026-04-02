@@ -137,11 +137,12 @@ set -eo pipefail
 export DEBUGINFOD_URLS=""
 
 echo "[CHROOT] make.conf 設定（env-update より先に行う）"
-cat > /etc/portage/make.conf << 'MAKEEOF'
+NPROC=$(nproc)
+cat > /etc/portage/make.conf << MAKEEOF
 COMMON_FLAGS="-O2 -pipe -march=__ARCH__"
-CFLAGS="${COMMON_FLAGS}"
-CXXFLAGS="${COMMON_FLAGS}"
-MAKEOPTS="-j$(nproc) -l$(nproc)"
+CFLAGS="\${COMMON_FLAGS}"
+CXXFLAGS="\${COMMON_FLAGS}"
+MAKEOPTS="-j${NPROC} -l${NPROC}"
 USE="X wayland alsa pulseaudio"
 GENTOO_MIRRORS="__MIRROR__"
 ACCEPT_LICENSE="*"
@@ -154,7 +155,7 @@ echo "[CHROOT] emerge-webrsync"
 emerge-webrsync
 
 echo "[CHROOT] プロファイル設定"
-eselect profile set default/linux/amd64/17.1
+eselect profile set default/linux/amd64/23.0
 
 echo "[CHROOT] @world アップデート（最長工程）"
 emerge --verbose --update --deep --newuse --with-bdeps=y @world

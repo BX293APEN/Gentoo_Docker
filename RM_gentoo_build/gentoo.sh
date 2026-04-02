@@ -118,6 +118,8 @@ ACCEPT_LICENSE="*"
 MAKEEOF
 
 echo "[CHROOT] 環境初期化"
+mkdir -p /etc/portage/repos.conf
+rm -rf /etc/portage/repos.conf
 env-update && source /etc/profile
 
 echo "[CHROOT] emerge-webrsync"

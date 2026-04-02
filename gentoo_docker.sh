@@ -108,12 +108,13 @@ cp /etc/resolv.conf "${BUILD_DIR}/etc/resolv.conf"
 # ─────────────────────────────────────────────
 cat > "${BUILD_DIR}/tmp/inside-chroot.sh" << INNEREOF
 #!/bin/bash
-set -euo pipefail
+# -u を外す: source /etc/profile.d/*.sh 内の未定義変数で即死するのを防ぐ
+set -eo pipefail
 
-echo "[CHROOT] 環境初期化"
-env-update && source /etc/profile
+# debuginfod.sh 等が DEBUGINFOD_URLS を参照する前にデフォルト値を与えておく
+export DEBUGINFOD_URLS=""
 
-echo "[CHROOT] make.conf 設定"
+echo "[CHROOT] make.conf 設定（env-update より先に行う）"
 cat > /etc/portage/make.conf << 'MAKEEOF'
 COMMON_FLAGS="-O2 -pipe -march=x86-64"
 CFLAGS="\${COMMON_FLAGS}"
@@ -123,6 +124,9 @@ USE="X wayland alsa pulseaudio"
 GENTOO_MIRRORS="https://distfiles.gentoo.org"
 ACCEPT_LICENSE="*"
 MAKEEOF
+
+echo "[CHROOT] 環境初期化"
+env-update && source /etc/profile
 
 echo "[CHROOT] emerge-webrsync"
 emerge-webrsync

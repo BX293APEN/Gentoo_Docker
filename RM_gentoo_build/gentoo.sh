@@ -12,13 +12,14 @@
 #   tail -f /build/gentoo-build.log
 # =============================================================================
 
-set -euo pipefail
+set -eo pipefail
 
 ROOT_PASSWORD="password"
 BUILD_DIR="/build/gentoo-rootfs"
 OUTPUT_TAR="/build/gentoo-rootfs.tar.gz"
 DONE_FLAG="/build/.build_done"
 STAGE3_URL_BASE="https://distfiles.gentoo.org/releases/amd64/autobuilds/current-stage3-amd64-openrc"
+STAGE3_LATEST_TXT="latest-stage3-amd64-openrc.txt"
 LOGFILE="/build/gentoo-build.log"
 
 mkdir -p /build
@@ -49,25 +50,40 @@ apt-get install -y --no-install-recommends \
 mkdir -p "$BUILD_DIR"
 
 # ─────────────────────────────────────────────
-# 2. stage3 ダウンロード（最新を自動取得）
+# 2. stage3 最新ファイル名を自動取得
+#    latest-stage3-*.txt を読んでファイル名を解決する
+#    （PGP Clearsigned 形式に対応: stage3-*.tar.xz 行を直接抽出）
 # ─────────────────────────────────────────────
-echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') stage3 取得中..."
+echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') stage3 最新ファイル名を取得中..."
 
-STAGE3_FILE=$(wget -qO- "${STAGE3_URL_BASE}/" \
-    | grep -oP 'stage3-amd64-openrc-[0-9]{8}T[0-9]{6}Z\.tar\.xz' \
-    | head -1)
+STAGE3_FILE=$(wget -qO- "${STAGE3_URL_BASE}/${STAGE3_LATEST_TXT}" \
+    | grep '^stage3-.*\.tar\.xz' \
+    | head -1 \
+    | awk '{print $1}')
 
 if [[ -z "$STAGE3_FILE" ]]; then
     echo "[ERROR] stage3ファイル名の取得に失敗しました。"
+    echo "  URL: ${STAGE3_URL_BASE}/${STAGE3_LATEST_TXT}"
     exit 1
 fi
 
-STAGE3_PATH="/build/${STAGE3_FILE}"
-echo "[INFO] ダウンロード: ${STAGE3_FILE}"
-wget -c "${STAGE3_URL_BASE}/${STAGE3_FILE}" -O "$STAGE3_PATH"
+echo "[INFO] 最新 stage3: ${STAGE3_FILE}"
 
 # ─────────────────────────────────────────────
-# 3. 展開
+# 3. stage3 ダウンロード（再開対応 -c オプション）
+# ─────────────────────────────────────────────
+STAGE3_PATH="/build/${STAGE3_FILE}"
+
+if [[ -f "$STAGE3_PATH" ]]; then
+    echo "[INFO] キャッシュ済み: ${STAGE3_PATH}、ダウンロードをスキップ"
+else
+    echo "[INFO] ダウンロード中: ${STAGE3_FILE}"
+    wget -c "${STAGE3_URL_BASE}/${STAGE3_FILE}" -O "${STAGE3_PATH}.tmp"
+    mv "${STAGE3_PATH}.tmp" "$STAGE3_PATH"
+fi
+
+# ─────────────────────────────────────────────
+# 4. 展開
 # ─────────────────────────────────────────────
 if [[ ! -f "${BUILD_DIR}/bin/bash" ]]; then
     echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') 展開中..."
@@ -75,30 +91,39 @@ if [[ ! -f "${BUILD_DIR}/bin/bash" ]]; then
         --xattrs-include='*.*' \
         --numeric-owner \
         -C "$BUILD_DIR"
+else
+    echo "[INFO] stage3 展開済みをスキップ"
 fi
 
 # ─────────────────────────────────────────────
-# 4. chroot内スクリプト生成
+# 5. chroot 内スクリプト生成
 # ─────────────────────────────────────────────
 cat > "$BUILD_DIR/tmp/inside-chroot.sh" << INNEREOF
 #!/bin/bash
-set -euo pipefail
+# -u を外す: source /etc/profile.d/*.sh 内の未定義変数で即死するのを防ぐ
+set -eo pipefail
 
-echo "[CHROOT] 環境初期化"
-env-update && source /etc/profile
+# debuginfod.sh 等が DEBUGINFOD_URLS を参照する前にデフォルト値を与えておく
+export DEBUGINFOD_URLS=""
 
-echo "[CHROOT] make.conf 設定"
+echo "[CHROOT] make.conf 設定（env-update より先に行う）"
 cat > /etc/portage/make.conf << 'MAKEEOF'
 COMMON_FLAGS="-O2 -pipe -march=x86-64"
-CFLAGS="${COMMON_FLAGS}"
-CXXFLAGS="${COMMON_FLAGS}"
-MAKEOPTS="-j$(nproc) -l$(nproc)"
+CFLAGS="\${COMMON_FLAGS}"
+CXXFLAGS="\${COMMON_FLAGS}"
+MAKEOPTS="-j\$(nproc) -l\$(nproc)"
 USE="X wayland alsa pulseaudio"
 GENTOO_MIRRORS="https://distfiles.gentoo.org"
 ACCEPT_LICENSE="*"
 MAKEEOF
 
+echo "[CHROOT] 環境初期化"
+env-update && source /etc/profile
+
+echo "[CHROOT] emerge-webrsync"
 emerge-webrsync
+
+echo "[CHROOT] プロファイル設定"
 eselect profile set default/linux/amd64/17.1
 
 echo "[CHROOT] @world アップデート（最長工程）"
@@ -113,6 +138,7 @@ emerge \
     app-editors/vim \
     app-editors/nano
 
+echo "[CHROOT] dhcpcd 自動起動登録"
 rc-update add dhcpcd default
 
 echo "[CHROOT] タイムゾーン設定"
@@ -125,10 +151,10 @@ locale-gen
 eselect locale set ja_JP.UTF-8
 env-update && source /etc/profile
 
-echo "[CHROOT] hostname"
+echo "[CHROOT] hostname 設定"
 echo "gentoo" > /etc/hostname
 
-echo "[CHROOT] root パスワード"
+echo "[CHROOT] root パスワード設定"
 echo "root:${ROOT_PASSWORD}" | chpasswd
 
 echo "[CHROOT] 完了"
@@ -138,7 +164,7 @@ chmod +x "$BUILD_DIR/tmp/inside-chroot.sh"
 cp /etc/resolv.conf "$BUILD_DIR/etc/resolv.conf"
 
 # ─────────────────────────────────────────────
-# 5. systemd-nspawn でビルド
+# 6. systemd-nspawn でビルド
 # ─────────────────────────────────────────────
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') systemd-nspawn ビルド開始（数時間かかります）"
 
@@ -148,7 +174,7 @@ systemd-nspawn \
     /bin/bash /tmp/inside-chroot.sh
 
 # ─────────────────────────────────────────────
-# 6. tar.gz 作成
+# 7. tar.gz 作成
 # ─────────────────────────────────────────────
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') tar.gz 作成中..."
 tar czpf "$OUTPUT_TAR" \

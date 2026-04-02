@@ -121,7 +121,7 @@ CFLAGS="\${COMMON_FLAGS}"
 CXXFLAGS="\${COMMON_FLAGS}"
 MAKEOPTS="-j\$(nproc) -l\$(nproc)"
 USE="X wayland alsa pulseaudio"
-GENTOO_MIRRORS="https://distfiles.gentoo.org"
+GENTOO_MIRRORS="https://ftp.iij.ad.jp/pub/linux/gentoo"
 ACCEPT_LICENSE="*"
 MAKEEOF
 

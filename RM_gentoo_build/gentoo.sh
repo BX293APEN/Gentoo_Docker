@@ -18,7 +18,7 @@ ROOT_PASSWORD="password"
 BUILD_DIR="/build/gentoo-rootfs"
 OUTPUT_TAR="/build/gentoo-rootfs.tar.gz"
 DONE_FLAG="/build/.build_done"
-STAGE3_URL_BASE="https://distfiles.gentoo.org/releases/amd64/autobuilds/current-stage3-amd64-openrc"
+STAGE3_URL_BASE="https://ftp.iij.ad.jp/pub/linux/gentoo/releases/amd64/autobuilds/current-stage3-amd64-openrc"
 STAGE3_LATEST_TXT="latest-stage3-amd64-openrc.txt"
 LOGFILE="/build/gentoo-build.log"
 
@@ -113,7 +113,7 @@ CFLAGS="\${COMMON_FLAGS}"
 CXXFLAGS="\${COMMON_FLAGS}"
 MAKEOPTS="-j\$(nproc) -l\$(nproc)"
 USE="X wayland alsa pulseaudio"
-GENTOO_MIRRORS="https://distfiles.gentoo.org"
+GENTOO_MIRRORS="https://ftp.iij.ad.jp/pub/linux/gentoo"
 ACCEPT_LICENSE="*"
 MAKEEOF
 

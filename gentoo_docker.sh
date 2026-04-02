@@ -131,6 +131,45 @@ cat > "${BUILD_DIR}/tmp/inside-chroot.sh" << 'INNEREOF'
 # -u を外す: source /etc/profile.d/*.sh 内の未定義変数で即死するのを防ぐ
 set -eo pipefail
 
+export DEBUGINFOD_URLS=""
+
+echo "[CHROOT] make.conf 設定 (env-update より先に行う)"
+NPROC=${CPU_CORE}
+cat > /etc/portage/make.conf << MAKEEOF
+COMMON_FLAGS="-O2 -pipe -march=__ARCH__"
+CFLAGS="\${COMMON_FLAGS}"
+CXXFLAGS="\${COMMON_FLAGS}"
+MAKEOPTS="-j${NPROC} -l${NPROC}"
+USE="X wayland alsa pulseaudio"
+GENTOO_MIRRORS="__MIRROR__"
+ACCEPT_LICENSE="*"
+MAKEEOF
+
+echo "[CHROOT] 環境初期化"
+env-update && source /etc/profile
+
+echo "[CHROOT] emerge-webrsync"
+emerge-webrsync
+
+echo "[CHROOT] emerge --sync (完全更新)"
+emerge --sync
+
+echo "[CHROOT] プロファイル設定"
+eselect profile set default/linux/amd64/23.0
+
+echo "[CHROOT] @world アップデート (最長工程)"
+emerge --verbose --update --deep --newuse --with-bdeps=y @world
+
+echo "[CHROOT] カーネル・必須パッケージ インストール"
+emerge \
+    sys-kernel/gentoo-kernel \
+    net-misc/dhcpcd \
+    app-admin/sudo \
+    sys-boot/grub \
+    app-editors/vim \
+    app-editors/nano \
+    dev-vcs/git
+
 mkdir -p /etc/portage/repos.conf
 mkdir -p /var/db/repos/gentoo
 rm -rf /var/db/repos/gentoo/*
@@ -150,44 +189,8 @@ sync-openpgp-key-path = /usr/share/openpgp-keys/gentoo-release.asc
 auto-sync = yes
 GITSYNCEOF
 
-
-export DEBUGINFOD_URLS=""
-
-echo "[CHROOT] make.conf 設定 (env-update より先に行う)"
-NPROC=${CPU_CORE}
-cat > /etc/portage/make.conf << MAKEEOF
-COMMON_FLAGS="-O2 -pipe -march=__ARCH__"
-CFLAGS="\${COMMON_FLAGS}"
-CXXFLAGS="\${COMMON_FLAGS}"
-MAKEOPTS="-j${NPROC} -l${NPROC}"
-USE="X wayland alsa pulseaudio"
-GENTOO_MIRRORS="__MIRROR__"
-ACCEPT_LICENSE="*"
-MAKEEOF
-
-echo "[CHROOT] 環境初期化"
-env-update && source /etc/profile
-
-# echo "[CHROOT] emerge-webrsync"
-# emerge-webrsync
-
-echo "[CHROOT] emerge --sync (完全更新)"
+echo "[CHROOT] emerge --sync (git更新)"
 emerge --sync
-
-echo "[CHROOT] プロファイル設定"
-eselect profile set default/linux/amd64/23.0
-
-echo "[CHROOT] @world アップデート (最長工程)"
-emerge --verbose --update --deep --newuse --with-bdeps=y @world
-
-echo "[CHROOT] カーネル・必須パッケージ インストール"
-emerge \
-    sys-kernel/gentoo-kernel \
-    net-misc/dhcpcd \
-    app-admin/sudo \
-    sys-boot/grub \
-    app-editors/vim \
-    app-editors/nano
 
 echo "[CHROOT] dhcpcd 自動起動登録"
 rc-update add dhcpcd default

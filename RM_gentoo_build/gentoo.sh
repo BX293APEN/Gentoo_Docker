@@ -103,26 +103,6 @@ cat > "$BUILD_DIR/tmp/inside-chroot.sh" << 'INNEREOF'
 # -u を外す: source /etc/profile.d/*.sh 内の未定義変数で即死するのを防ぐ
 set -eo pipefail
 
-mkdir -p /etc/portage/repos.conf
-mkdir -p /var/db/repos/gentoo
-rm -rf /var/db/repos/gentoo/*
-chown -R portage:portage /var/db/repos/gentoo
-
-cat > /etc/portage/repos.conf/gentoo.conf << GITSYNCEOF
-[DEFAULT]
-main-repo = gentoo
-
-[gentoo]
-location = /var/db/repos/gentoo
-sync-type = git
-sync-uri = https://github.com/gentoo-mirror/gentoo.git
-sync-depth = 1
-sync-git-verify-commit-signature = yes
-sync-openpgp-key-path = /usr/share/openpgp-keys/gentoo-release.asc
-auto-sync = yes
-GITSYNCEOF
-
-
 # debuginfod.sh 等が DEBUGINFOD_URLS を参照する前にデフォルト値を与えておく
 export DEBUGINFOD_URLS=""
 
@@ -159,7 +139,30 @@ emerge \
     app-admin/sudo \
     sys-boot/grub \
     app-editors/vim \
-    app-editors/nano
+    app-editors/nano \
+    dev-vcs/git
+
+mkdir -p /etc/portage/repos.conf
+mkdir -p /var/db/repos/gentoo
+rm -rf /var/db/repos/gentoo/*
+chown -R portage:portage /var/db/repos/gentoo
+
+cat > /etc/portage/repos.conf/gentoo.conf << GITSYNCEOF
+[DEFAULT]
+main-repo = gentoo
+
+[gentoo]
+location = /var/db/repos/gentoo
+sync-type = git
+sync-uri = https://github.com/gentoo-mirror/gentoo.git
+sync-depth = 1
+sync-git-verify-commit-signature = yes
+sync-openpgp-key-path = /usr/share/openpgp-keys/gentoo-release.asc
+auto-sync = yes
+GITSYNCEOF
+
+echo "[CHROOT] emerge --sync (git更新)"
+emerge --sync
 
 echo "[CHROOT] dhcpcd 自動起動登録"
 rc-update add dhcpcd default

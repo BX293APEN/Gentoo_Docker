@@ -59,7 +59,6 @@ fi
 mkdir -p "$BUILD_DIR"
 mkdir -p "${FLAG_DIR}"
 
-chmod 777 -R "$BUILD_DIR"
 chmod 777 -R "${FLAG_DIR}"
 # ─────────────────────────────────────────────
 # 2. stage3 最新ファイル名を自動取得

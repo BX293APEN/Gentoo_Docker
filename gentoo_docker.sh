@@ -41,13 +41,11 @@ mkdir -p "$BUILD_DIR"
 # ─────────────────────────────────────────────
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') stage3 最新ファイル名を取得中..."
 
-# コメント行・空行を除いた最初のパスからファイル名だけ抽出
+# stage3-*.tar.xz にマッチする行だけ抽出（PGP Clearsigned署名ブロックを無視）
 STAGE3_FILE=$(wget -qO- "${STAGE3_URL_BASE}/${STAGE3_LATEST_TXT}" \
-    | grep -v '^#' \
-    | grep -v '^$' \
+    | grep '^stage3-.*\.tar\.xz' \
     | head -1 \
-    | awk '{print $1}' \
-    | xargs basename)
+    | awk '{print $1}')
 
 if [[ -z "$STAGE3_FILE" ]]; then
     echo "[ERROR] stage3ファイル名の取得に失敗しました。"

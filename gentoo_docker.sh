@@ -30,8 +30,8 @@ WS="${WS:-build}"
 BUILD_DIR="/${WS}/gentoo-rootfs"
 OUTPUT_TAR="/${WS}/gentoo-rootfs.tar.gz"
 FLAG_DIR="/${WS}/FLAGS"
-UPDATE_FLAG="/${FLAG_DIR}/.update_done"
-DONE_FLAG="/${FLAG_DIR}/.build_done"
+UPDATE_FLAG="${FLAG_DIR}/.update_done"
+DONE_FLAG="${FLAG_DIR}/.build_done"
 
 # stage3 パスを組み立て
 STAGE3_URL_BASE="${MIRROR}/releases/${STAGE3_ARCH}/autobuilds/current-stage3-${STAGE3_ARCH}-openrc"

@@ -3,24 +3,46 @@
 # gentoo_docker.sh  ―  Docker コンテナ内エントリーポイント
 # 役割: stage3取得 → chroot でビルド → /build/gentoo-rootfs.tar.gz 出力
 #
+# 設定は .env を編集してください。スクリプト本体は変更不要です。
+#
 # 進捗確認（別ターミナルで）:
 #   docker logs -f Docker_Linux
-#
-# ホストUbuntuは一切変更されません。
 # =============================================================================
 
-set -euo pipefail
+set -eo pipefail
 
-ROOT_PASSWORD="password"
-BUILD_DIR="/build/gentoo-rootfs"
-OUTPUT_TAR="/build/gentoo-rootfs.tar.gz"
-DONE_FLAG="/build/.build_done"
-STAGE3_URL_BASE="https://ftp.iij.ad.jp/pub/linux/gentoo/releases/amd64/autobuilds/current-stage3-amd64-openrc"
-STAGE3_LATEST_TXT="latest-stage3-amd64-openrc.txt"
+# ─────────────────────────────────────────────
+# .env → compose.yml environment → ここで受け取る
+# 未設定時のデフォルト値を定義
+# ─────────────────────────────────────────────
+ROOT_PASSWORD="${ROOT_PASSWORD:-password}"
+MIRROR="${MIRROR:-https://ftp.iij.ad.jp/pub/linux/gentoo}"
+ARCH="${ARCH:-x86-64}"
+LOCALE="${LOCALE:-ja_JP.UTF-8 UTF-8}"
+TZ="${TZ:-Asia/Tokyo}"
+
+# WS はコンテナ内マウントポイント名（compose.yml の volumes と一致）
+WS="${WS:-build}"
+BUILD_DIR="/${WS}/gentoo-rootfs"
+OUTPUT_TAR="/${WS}/gentoo-rootfs.tar.gz"
+DONE_FLAG="/${WS}/.build_done"
+
+# ARCH から stage3 パスを組み立て
+# 例: x86-64 → amd64, aarch64 → arm64 (必要なら拡張)
+STAGE3_ARCH="amd64"
+STAGE3_URL_BASE="${MIRROR}/releases/${STAGE3_ARCH}/autobuilds/current-stage3-${STAGE3_ARCH}-openrc"
+STAGE3_LATEST_TXT="latest-stage3-${STAGE3_ARCH}-openrc.txt"
+
+# LOCALE の最初のフィールドをロケール名として使用（例: ja_JP.UTF-8）
+LOCALE_NAME=$(echo "$LOCALE" | awk '{print $1}')
 
 echo "============================================"
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') Gentoo ビルド開始"
-echo "  出力先: ${OUTPUT_TAR}"
+echo "  ミラー  : ${MIRROR}"
+echo "  アーキ  : ${ARCH}"
+echo "  ロケール: ${LOCALE_NAME}"
+echo "  タイムゾーン: ${TZ}"
+echo "  出力先  : ${OUTPUT_TAR}"
 echo "============================================"
 
 # 既にビルド済みならスキップ
@@ -37,11 +59,10 @@ mkdir -p "$BUILD_DIR"
 
 # ─────────────────────────────────────────────
 # 2. stage3 最新ファイル名を自動取得
-#    latest-stage3-*.txt を読んでファイル名を解決する
+#    （PGP Clearsigned 形式に対応: stage3-*.tar.xz 行を直接抽出）
 # ─────────────────────────────────────────────
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') stage3 最新ファイル名を取得中..."
 
-# stage3-*.tar.xz にマッチする行だけ抽出（PGP Clearsigned署名ブロックを無視）
 STAGE3_FILE=$(wget -qO- "${STAGE3_URL_BASE}/${STAGE3_LATEST_TXT}" \
     | grep '^stage3-.*\.tar\.xz' \
     | head -1 \
@@ -58,7 +79,7 @@ echo "[INFO] 最新 stage3: ${STAGE3_FILE}"
 # ─────────────────────────────────────────────
 # 3. stage3 ダウンロード（再開対応 -c オプション）
 # ─────────────────────────────────────────────
-STAGE3_PATH="/build/${STAGE3_FILE}"
+STAGE3_PATH="/${WS}/${STAGE3_FILE}"
 
 if [[ -f "$STAGE3_PATH" ]]; then
     echo "[INFO] キャッシュ済み: ${STAGE3_PATH}、ダウンロードをスキップ"
@@ -105,23 +126,24 @@ cp /etc/resolv.conf "${BUILD_DIR}/etc/resolv.conf"
 
 # ─────────────────────────────────────────────
 # 6. chroot 内スクリプト生成
+#    'INNEREOF' でクォートして外側シェルの展開を抑制
+#    ROOT_PASSWORD / MIRROR / LOCALE / TZ は sed で後から埋め込む
 # ─────────────────────────────────────────────
 cat > "${BUILD_DIR}/tmp/inside-chroot.sh" << 'INNEREOF'
 #!/bin/bash
 # -u を外す: source /etc/profile.d/*.sh 内の未定義変数で即死するのを防ぐ
 set -eo pipefail
 
-# debuginfod.sh 等が DEBUGINFOD_URLS を参照する前にデフォルト値を与えておく
 export DEBUGINFOD_URLS=""
 
 echo "[CHROOT] make.conf 設定（env-update より先に行う）"
 cat > /etc/portage/make.conf << 'MAKEEOF'
-COMMON_FLAGS="-O2 -pipe -march=x86-64"
+COMMON_FLAGS="-O2 -pipe -march=__ARCH__"
 CFLAGS="${COMMON_FLAGS}"
 CXXFLAGS="${COMMON_FLAGS}"
 MAKEOPTS="-j$(nproc) -l$(nproc)"
 USE="X wayland alsa pulseaudio"
-GENTOO_MIRRORS="https://ftp.iij.ad.jp/pub/linux/gentoo"
+GENTOO_MIRRORS="__MIRROR__"
 ACCEPT_LICENSE="*"
 MAKEEOF
 
@@ -150,13 +172,13 @@ echo "[CHROOT] dhcpcd 自動起動登録"
 rc-update add dhcpcd default
 
 echo "[CHROOT] タイムゾーン設定"
-echo "Asia/Tokyo" > /etc/timezone
+echo "__TZ__" > /etc/timezone
 emerge --config sys-libs/timezone-data
 
 echo "[CHROOT] ロケール設定"
-echo "ja_JP.UTF-8 UTF-8" >> /etc/locale.gen
+echo "__LOCALE__" >> /etc/locale.gen
 locale-gen
-eselect locale set ja_JP.UTF-8
+eselect locale set __LOCALE_NAME__
 env-update && source /etc/profile
 
 echo "[CHROOT] hostname 設定"
@@ -168,8 +190,15 @@ echo "root:__ROOT_PASSWORD__" | chpasswd
 echo "[CHROOT] 完了"
 INNEREOF
 
-# ROOT_PASSWORD を実際の値で置換
-sed -i "s/__ROOT_PASSWORD__/${ROOT_PASSWORD}/g" "${BUILD_DIR}/tmp/inside-chroot.sh"
+# .env から渡された値をプレースホルダーに埋め込む
+sed -i \
+    -e "s|__ROOT_PASSWORD__|${ROOT_PASSWORD}|g" \
+    -e "s|__MIRROR__|${MIRROR}|g" \
+    -e "s|__ARCH__|${ARCH}|g" \
+    -e "s|__TZ__|${TZ}|g" \
+    -e "s|__LOCALE__|${LOCALE}|g" \
+    -e "s|__LOCALE_NAME__|${LOCALE_NAME}|g" \
+    "${BUILD_DIR}/tmp/inside-chroot.sh"
 
 chmod +x "${BUILD_DIR}/tmp/inside-chroot.sh"
 
@@ -191,7 +220,7 @@ trap - EXIT
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') tar.gz 作成中..."
 tar czpf "$OUTPUT_TAR" \
     --one-file-system \
-    -C /build \
+    -C "/${WS}" \
     gentoo-rootfs
 
 # ─────────────────────────────────────────────

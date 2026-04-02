@@ -30,8 +30,14 @@ services:
     stop_grace_period: 12h  # 長時間ビルドを途中で止めない
 
     environment:
+      - MIRROR=${MIRROR}
+      - ARCH=${ARCH}
+      - WS=${WS}
       - TZ=${TIME_ZONE}
+      - LOCALE=${LOCALE}
       - LANG=${LANG}
+      - WS=${WS}
+      - ROOT_PASSWORD=${ROOT_PASSWORD}
 
     command:
       - /${ENTRY_DIR}/${ENTRY_POINT}

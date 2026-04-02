@@ -31,7 +31,7 @@ services:
 
     environment:
       - MIRROR=${MIRROR}
-      - ARCH=${ARCH}
+      - STAGE3_ARCH=${STAGE3_ARCH}
       - CPU_CORE=${CPU_CORE}
       - WS=${WS}
       - TZ=${TIME_ZONE}

@@ -17,8 +17,10 @@ set -eo pipefail
 # ─────────────────────────────────────────────
 ROOT_PASSWORD="${ROOT_PASSWORD:-password}"
 MIRROR="${MIRROR:-https://ftp.iij.ad.jp/pub/linux/gentoo}"
-ARCH="${ARCH:-x86-64}"
+STAGE3_ARCH="${STAGE3_ARCH:-amd64}"
 LOCALE="${LOCALE:-ja_JP.UTF-8 UTF-8}"
+LOCALE_NAME="${LANG:-ja_JP.UTF-8}"
+
 TZ="${TZ:-Asia/Tokyo}"
 
 # WS はコンテナ内マウントポイント名 (compose.yml の volumes と一致)
@@ -27,19 +29,14 @@ BUILD_DIR="/${WS}/gentoo-rootfs"
 OUTPUT_TAR="/${WS}/gentoo-rootfs.tar.gz"
 DONE_FLAG="/${WS}/.build_done"
 
-# ARCH から stage3 パスを組み立て
-# 例: x86-64 → amd64, aarch64 → arm64 (必要なら拡張)
-STAGE3_ARCH="amd64"
+# stage3 パスを組み立て
 STAGE3_URL_BASE="${MIRROR}/releases/${STAGE3_ARCH}/autobuilds/current-stage3-${STAGE3_ARCH}-openrc"
 STAGE3_LATEST_TXT="latest-stage3-${STAGE3_ARCH}-openrc.txt"
-
-# LOCALE の最初のフィールドをロケール名として使用 (例: ja_JP.UTF-8)
-LOCALE_NAME=$(echo "$LOCALE" | awk '{print $1}')
 
 echo "============================================"
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') Gentoo ビルド開始"
 echo "  ミラー  : ${MIRROR}"
-echo "  アーキ  : ${ARCH}"
+echo "  アーキ  : ${STAGE3_ARCH}"
 echo "  ロケール: ${LOCALE_NAME}"
 echo "  タイムゾーン: ${TZ}"
 echo "  出力先  : ${OUTPUT_TAR}"

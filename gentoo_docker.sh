@@ -59,6 +59,8 @@ fi
 mkdir -p "$BUILD_DIR"
 mkdir -p "${FLAG_DIR}"
 
+chmod 777 -R "$BUILD_DIR"
+chmod 777 -R "${FLAG_DIR}"
 # ─────────────────────────────────────────────
 # 2. stage3 最新ファイル名を自動取得
 #     (PGP Clearsigned 形式に対応: stage3-*.tar.xz 行を直接抽出)

@@ -18,6 +18,7 @@ set -eo pipefail
 ROOT_PASSWORD="${ROOT_PASSWORD:-password}"
 MIRROR="${MIRROR:-https://ftp.iij.ad.jp/pub/linux/gentoo}"
 STAGE3_ARCH="${STAGE3_ARCH:-amd64}"
+VERSION="23.0"
 
 LOCALE="${LOCALE:-ja_JP.UTF-8 UTF-8}"
 LOCALE_NAME="${LANG:-ja_JP.UTF-8}"
@@ -174,16 +175,16 @@ date '+%Y-%m-%d %H:%M:%S' > "$UPDATE_FLAG"
 if [[ ! -f "$PROFILE_FLAG" ]]; then
     echo "[CHROOT] プロファイル設定"
     PROFILE_NUM=$(eselect profile list \
-        | grep 'default/linux/amd64/23.0 ' \
+        | grep "default/linux/${STAGE3_ARCH}/${VERSION}" \
         | grep -v 'split-usr\|selinux\|hardened\|musl\|x32' \
         | head -1 \
         | awk '{print $1}' \
         | tr -d '[]')
 
-    # 23.0が見つからない場合は安定版の標準プロファイルを自動選択
+    # ${VERSION}が見つからない場合は安定版の標準プロファイルを自動選択
     if [[ -z "$PROFILE_NUM" ]]; then
         PROFILE_NUM=$(eselect profile list \
-            | grep 'default/linux/amd64/' \
+            | grep "default/linux/${STAGE3_ARCH}/" \
             | grep -v 'split-usr\|selinux\|hardened\|musl\|x32\|developer\|desktop\|gnome\|plasma\|systemd' \
             | head -1 \
             | awk '{print $1}' \

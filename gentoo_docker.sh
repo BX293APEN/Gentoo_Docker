@@ -16,6 +16,7 @@ BUILD_DIR="/build/gentoo-rootfs"
 OUTPUT_TAR="/build/gentoo-rootfs.tar.gz"
 DONE_FLAG="/build/.build_done"
 STAGE3_URL_BASE="https://ftp.iij.ad.jp/pub/linux/gentoo/releases/amd64/autobuilds/current-stage3-amd64-openrc"
+STAGE3_TAR_FILE="stage3-amd64-openrc-20260329T161601Z.tar.xz"
 
 echo "============================================"
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') Gentoo ビルド開始"
@@ -39,9 +40,7 @@ mkdir -p "$BUILD_DIR"
 # ─────────────────────────────────────────────
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') stage3 ファイル名を取得中..."
 
-STAGE3_FILE=$(wget -qO- "${STAGE3_URL_BASE}/" \
-    | grep -oP 'stage3-amd64-openrc-[0-9]{8}T[0-9]{6}Z\.tar\.xz' \
-    | head -1)
+STAGE3_FILE=$(wget -qO- "${STAGE3_URL_BASE}/${STAGE3_TAR_FILE}")
 
 if [[ -z "$STAGE3_FILE" ]]; then
     echo "[ERROR] stage3ファイル名の取得に失敗しました。"

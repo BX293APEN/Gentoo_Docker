@@ -5,7 +5,7 @@
 #
 # 設定は .env を編集してください。スクリプト本体は変更不要です。
 #
-# 進捗確認（別ターミナルで）:
+# 進捗確認 (別ターミナルで):
 #   docker logs -f Docker_Linux
 # =============================================================================
 
@@ -21,7 +21,7 @@ ARCH="${ARCH:-x86-64}"
 LOCALE="${LOCALE:-ja_JP.UTF-8 UTF-8}"
 TZ="${TZ:-Asia/Tokyo}"
 
-# WS はコンテナ内マウントポイント名（compose.yml の volumes と一致）
+# WS はコンテナ内マウントポイント名 (compose.yml の volumes と一致)
 WS="${WS:-build}"
 BUILD_DIR="/${WS}/gentoo-rootfs"
 OUTPUT_TAR="/${WS}/gentoo-rootfs.tar.gz"
@@ -33,7 +33,7 @@ STAGE3_ARCH="amd64"
 STAGE3_URL_BASE="${MIRROR}/releases/${STAGE3_ARCH}/autobuilds/current-stage3-${STAGE3_ARCH}-openrc"
 STAGE3_LATEST_TXT="latest-stage3-${STAGE3_ARCH}-openrc.txt"
 
-# LOCALE の最初のフィールドをロケール名として使用（例: ja_JP.UTF-8）
+# LOCALE の最初のフィールドをロケール名として使用 (例: ja_JP.UTF-8)
 LOCALE_NAME=$(echo "$LOCALE" | awk '{print $1}')
 
 echo "============================================"
@@ -59,7 +59,7 @@ mkdir -p "$BUILD_DIR"
 
 # ─────────────────────────────────────────────
 # 2. stage3 最新ファイル名を自動取得
-#    （PGP Clearsigned 形式に対応: stage3-*.tar.xz 行を直接抽出）
+#     (PGP Clearsigned 形式に対応: stage3-*.tar.xz 行を直接抽出)
 # ─────────────────────────────────────────────
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') stage3 最新ファイル名を取得中..."
 
@@ -77,7 +77,7 @@ fi
 echo "[INFO] 最新 stage3: ${STAGE3_FILE}"
 
 # ─────────────────────────────────────────────
-# 3. stage3 ダウンロード（再開対応 -c オプション）
+# 3. stage3 ダウンロード (再開対応 -c オプション)
 # ─────────────────────────────────────────────
 STAGE3_PATH="/${WS}/${STAGE3_FILE}"
 
@@ -90,7 +90,7 @@ else
 fi
 
 # ─────────────────────────────────────────────
-# 4. stage3 展開（既に展開済みならスキップ）
+# 4. stage3 展開 (既に展開済みならスキップ)
 # ─────────────────────────────────────────────
 if [[ ! -f "${BUILD_DIR}/bin/bash" ]]; then
     echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') 展開中..."
@@ -136,8 +136,8 @@ set -eo pipefail
 
 export DEBUGINFOD_URLS=""
 
-echo "[CHROOT] make.conf 設定（env-update より先に行う）"
-NPROC=$(nproc)
+echo "[CHROOT] make.conf 設定 (env-update より先に行う)"
+NPROC=${CPU_CORE}
 cat > /etc/portage/make.conf << MAKEEOF
 COMMON_FLAGS="-O2 -pipe -march=__ARCH__"
 CFLAGS="\${COMMON_FLAGS}"
@@ -154,10 +154,13 @@ env-update && source /etc/profile
 echo "[CHROOT] emerge-webrsync"
 emerge-webrsync
 
+echo "[CHROOT] emerge --sync (完全更新)"
+emerge --sync
+
 echo "[CHROOT] プロファイル設定"
 eselect profile set default/linux/amd64/23.0
 
-echo "[CHROOT] @world アップデート（最長工程）"
+echo "[CHROOT] @world アップデート (最長工程)"
 emerge --verbose --update --deep --newuse --with-bdeps=y @world
 
 echo "[CHROOT] カーネル・必須パッケージ インストール"
@@ -206,7 +209,7 @@ chmod +x "${BUILD_DIR}/tmp/inside-chroot.sh"
 # ─────────────────────────────────────────────
 # 7. chroot 実行
 # ─────────────────────────────────────────────
-echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') chroot ビルド開始（数時間かかります）"
+echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') chroot ビルド開始 (数時間かかります)"
 chroot "$BUILD_DIR" /bin/bash /tmp/inside-chroot.sh
 
 # ─────────────────────────────────────────────

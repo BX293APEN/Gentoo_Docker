@@ -141,7 +141,7 @@ set -eo pipefail
 export DEBUGINFOD_URLS=""
 
 echo "[CHROOT] make.conf 設定 (env-update より先に行う)"
-NPROC=${CPU_CORE}
+NPROC=__CPU_CORE__
 cat > /etc/portage/make.conf << MAKEEOF
 COMMON_FLAGS="-O2 -pipe -march=__ARCH__"
 CFLAGS="\${COMMON_FLAGS}"
@@ -170,16 +170,16 @@ date '+%Y-%m-%d %H:%M:%S' > "__UPDATE_FLAG__"
 
 echo "[CHROOT] プロファイル設定"
 PROFILE_NUM=$(eselect profile list \
-    | grep "default/linux/${STAGE3_ARCH}/${VERSION}" \
+    | grep "default/linux/__STAGE3_ARCH__/__VERSION__" \
     | grep -v 'split-usr\|selinux\|hardened\|musl\|x32' \
     | head -1 \
     | awk '{print $1}' \
     | tr -d '[]')
 
-# ${VERSION}が見つからない場合は安定版の標準プロファイルを自動選択
+# __VERSION__が見つからない場合は安定版の標準プロファイルを自動選択
 if [[ -z "$PROFILE_NUM" ]]; then
     PROFILE_NUM=$(eselect profile list \
-        | grep "default/linux/${STAGE3_ARCH}/" \
+        | grep "default/linux/__STAGE3_ARCH__/" \
         | grep -v 'split-usr\|selinux\|hardened\|musl\|x32\|developer\|desktop\|gnome\|plasma\|systemd' \
         | head -1 \
         | awk '{print $1}' \
@@ -260,6 +260,9 @@ sed -i \
     -e "s|__LOCALE__|${LOCALE}|g" \
     -e "s|__LOCALE_NAME__|${LOCALE_NAME}|g" \
     -e "s|__UPDATE_FLAG__|${UPDATE_FLAG}|g" \
+    -e "s|__STAGE3_ARCH__|${STAGE3_ARCH}|g" \
+    -e "s|__VERSION__|${VERSION}|g" \
+    -e "s|__CPU_CORE__|${CPU_CORE}|g" \
     "${BUILD_DIR}/tmp/inside-chroot.sh"
 
 chmod +x "${BUILD_DIR}/tmp/inside-chroot.sh"

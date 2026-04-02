@@ -98,7 +98,7 @@ fi
 # ─────────────────────────────────────────────
 # 5. chroot 内スクリプト生成
 # ─────────────────────────────────────────────
-cat > "$BUILD_DIR/tmp/inside-chroot.sh" << INNEREOF
+cat > "$BUILD_DIR/tmp/inside-chroot.sh" << 'INNEREOF'
 #!/bin/bash
 # -u を外す: source /etc/profile.d/*.sh 内の未定義変数で即死するのを防ぐ
 set -eo pipefail
@@ -155,10 +155,13 @@ echo "[CHROOT] hostname 設定"
 echo "gentoo" > /etc/hostname
 
 echo "[CHROOT] root パスワード設定"
-echo "root:${ROOT_PASSWORD}" | chpasswd
+echo "root:__ROOT_PASSWORD__" | chpasswd
 
 echo "[CHROOT] 完了"
 INNEREOF
+
+# ROOT_PASSWORD を実際の値で置換
+sed -i "s/__ROOT_PASSWORD__/${ROOT_PASSWORD}/g" "$BUILD_DIR/tmp/inside-chroot.sh"
 
 chmod +x "$BUILD_DIR/tmp/inside-chroot.sh"
 cp /etc/resolv.conf "$BUILD_DIR/etc/resolv.conf"

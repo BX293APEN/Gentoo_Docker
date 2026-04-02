@@ -171,7 +171,7 @@ date '+%Y-%m-%d %H:%M:%S' > "__UPDATE_FLAG__"
 
 echo "[CHROOT] プロファイル設定"
 PROFILE_NUM=$(eselect profile list \
-    | grep "default/linux/__STAGE3_ARCH__/__VERSION__" \
+    | grep 'default/linux/__STAGE3_ARCH__/__VERSION__' \
     | grep -v 'split-usr\|selinux\|hardened\|musl\|x32' \
     | head -1 \
     | awk '{print $1}' \
@@ -180,11 +180,17 @@ PROFILE_NUM=$(eselect profile list \
 # __VERSION__が見つからない場合は安定版の標準プロファイルを自動選択
 if [[ -z "$PROFILE_NUM" ]]; then
     PROFILE_NUM=$(eselect profile list \
-        | grep "default/linux/__STAGE3_ARCH__/" \
+        | grep 'default/linux/__STAGE3_ARCH__/' \
         | grep -v 'split-usr\|selinux\|hardened\|musl\|x32\|developer\|desktop\|gnome\|plasma\|systemd' \
         | head -1 \
         | awk '{print $1}' \
         | tr -d '[]')
+fi
+
+if [[ -z "$PROFILE_NUM" ]]; then
+    echo "[ERROR] プロファイルが見つかりませんでした。利用可能一覧:"
+    eselect profile list
+    exit 1
 fi
 
 echo "[CHROOT] 選択プロファイル番号: ${PROFILE_NUM}"

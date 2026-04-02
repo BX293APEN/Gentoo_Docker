@@ -15,7 +15,7 @@ ROOT_PASSWORD="password"
 BUILD_DIR="/build/gentoo-rootfs"
 OUTPUT_TAR="/build/gentoo-rootfs.tar.gz"
 DONE_FLAG="/build/.build_done"
-STAGE3_URL_BASE="https://distfiles.gentoo.org/releases/amd64/autobuilds/current-stage3-amd64-openrc"
+STAGE3_URL_BASE="https://ftp.iij.ad.jp/pub/linux/gentoo/releases/amd64/autobuilds/current-stage3-amd64-openrc"
 
 echo "============================================"
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') Gentoo ビルド開始"

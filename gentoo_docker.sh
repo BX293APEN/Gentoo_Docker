@@ -168,8 +168,8 @@ MAKEEOF
 echo "[CHROOT] 環境初期化"
 env-update && source /etc/profile
 
-echo "[CHROOT] emerge-webrsync"
-emerge-webrsync
+# echo "[CHROOT] emerge-webrsync"
+# emerge-webrsync
 
 echo "[CHROOT] emerge --sync (完全更新)"
 emerge --sync

@@ -30,10 +30,8 @@ WS="${WS:-build}"
 BUILD_DIR="/${WS}/gentoo-rootfs"
 OUTPUT_TAR="/${WS}/gentoo-rootfs.tar.gz"
 FLAG_DIR="/${WS}/FLAGS"
-PROFILE_FLAG="/${FLAG_DIR}/.profile_done"
 UPDATE_FLAG="/${FLAG_DIR}/.update_done"
 DONE_FLAG="/${FLAG_DIR}/.build_done"
-
 
 # stage3 パスを組み立て
 STAGE3_URL_BASE="${MIRROR}/releases/${STAGE3_ARCH}/autobuilds/current-stage3-${STAGE3_ARCH}-openrc"
@@ -153,14 +151,10 @@ ACCEPT_LICENSE="*"
 MAKEEOF
 
 echo "[CHROOT] 環境初期化"
-if [[ ! -f "$PROFILE_FLAG" ]]; then
-    mkdir -p /etc/portage/repos.conf
-    rm -rf /etc/portage/repos.conf
-fi
 
 env-update && source /etc/profile
 
-if [[ ! -f "$PROFILE_FLAG" ]]; then
+if [[ ! -f "/etc/portage/repos.conf" ]]; then
     echo "[CHROOT] emerge-webrsync"
     emerge-webrsync
 fi
@@ -172,28 +166,26 @@ fi
 
 date '+%Y-%m-%d %H:%M:%S' > "$UPDATE_FLAG"
 
-if [[ ! -f "$PROFILE_FLAG" ]]; then
-    echo "[CHROOT] プロファイル設定"
+echo "[CHROOT] プロファイル設定"
+PROFILE_NUM=$(eselect profile list \
+    | grep "default/linux/${STAGE3_ARCH}/${VERSION}" \
+    | grep -v 'split-usr\|selinux\|hardened\|musl\|x32' \
+    | head -1 \
+    | awk '{print $1}' \
+    | tr -d '[]')
+
+# ${VERSION}が見つからない場合は安定版の標準プロファイルを自動選択
+if [[ -z "$PROFILE_NUM" ]]; then
     PROFILE_NUM=$(eselect profile list \
-        | grep "default/linux/${STAGE3_ARCH}/${VERSION}" \
-        | grep -v 'split-usr\|selinux\|hardened\|musl\|x32' \
+        | grep "default/linux/${STAGE3_ARCH}/" \
+        | grep -v 'split-usr\|selinux\|hardened\|musl\|x32\|developer\|desktop\|gnome\|plasma\|systemd' \
         | head -1 \
         | awk '{print $1}' \
         | tr -d '[]')
-
-    # ${VERSION}が見つからない場合は安定版の標準プロファイルを自動選択
-    if [[ -z "$PROFILE_NUM" ]]; then
-        PROFILE_NUM=$(eselect profile list \
-            | grep "default/linux/${STAGE3_ARCH}/" \
-            | grep -v 'split-usr\|selinux\|hardened\|musl\|x32\|developer\|desktop\|gnome\|plasma\|systemd' \
-            | head -1 \
-            | awk '{print $1}' \
-            | tr -d '[]')
-    fi
-
-    echo "[CHROOT] 選択プロファイル番号: ${PROFILE_NUM}"
-    eselect profile set "${PROFILE_NUM}"
 fi
+
+echo "[CHROOT] 選択プロファイル番号: ${PROFILE_NUM}"
+eselect profile set "${PROFILE_NUM}"
 
 eselect profile show
 
@@ -210,7 +202,7 @@ emerge \
     app-editors/nano \
     dev-vcs/git
 
-if [[ ! -f "$PROFILE_FLAG" ]]; then
+if [[ ! -f "/etc/portage/repos.conf" ]]; then
     mkdir -p /etc/portage/repos.conf
     mkdir -p /var/db/repos/gentoo
     rm -rf /var/db/repos/gentoo/*
@@ -234,9 +226,6 @@ GITSYNCEOF
     echo "[CHROOT] emerge --sync (git更新)"
     emerge --sync
 fi
-
-date '+%Y-%m-%d %H:%M:%S' > "$PROFILE_FLAG"
-
 
 echo "[CHROOT] dhcpcd 自動起動登録"
 rc-update add dhcpcd default

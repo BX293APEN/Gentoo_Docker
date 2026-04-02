@@ -123,6 +123,9 @@ env-update && source /etc/profile
 echo "[CHROOT] emerge-webrsync"
 emerge-webrsync
 
+echo "[CHROOT] emerge --sync (完全更新)"
+emerge --sync
+
 echo "[CHROOT] プロファイル設定"
 eselect profile set default/linux/amd64/23.0
 

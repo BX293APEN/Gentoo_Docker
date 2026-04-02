@@ -155,6 +155,8 @@ echo "[CHROOT] 環境初期化"
 
 env-update && source /etc/profile
 
+rm -f /var/db/repos/gentoo/metadata/timestamp.*
+
 if [[ ! -f "/etc/portage/repos.conf" ]]; then
     echo "[CHROOT] emerge-webrsync"
     emerge-webrsync

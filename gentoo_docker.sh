@@ -152,14 +152,14 @@ ACCEPT_LICENSE="*"
 MAKEEOF
 
 echo "[CHROOT] 環境初期化"
-if [[! -f "$PROFILE_FLAG" ]]; then
+if [[ ! -f "$PROFILE_FLAG" ]]; then
     mkdir -p /etc/portage/repos.conf
     rm -rf /etc/portage/repos.conf
 fi
 
 env-update && source /etc/profile
 
-if [[! -f "$PROFILE_FLAG" ]]; then
+if [[ ! -f "$PROFILE_FLAG" ]]; then
     echo "[CHROOT] emerge-webrsync"
     emerge-webrsync
 fi
@@ -167,7 +167,7 @@ fi
 echo "[CHROOT] emerge --sync (完全更新)"
 emerge --sync
 
-if [[! -f "$PROFILE_FLAG" ]]; then
+if [[ ! -f "$PROFILE_FLAG" ]]; then
     echo "[CHROOT] プロファイル設定"
     PROFILE_NUM=$(eselect profile list \
         | grep 'default/linux/amd64/23.0 ' \
@@ -205,7 +205,7 @@ emerge \
     app-editors/nano \
     dev-vcs/git
 
-if [[! -f "$PROFILE_FLAG" ]]; then
+if [[ ! -f "$PROFILE_FLAG" ]]; then
     mkdir -p /etc/portage/repos.conf
     mkdir -p /var/db/repos/gentoo
     rm -rf /var/db/repos/gentoo/*

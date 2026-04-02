@@ -16,7 +16,7 @@ BUILD_DIR="/build/gentoo-rootfs"
 OUTPUT_TAR="/build/gentoo-rootfs.tar.gz"
 DONE_FLAG="/build/.build_done"
 STAGE3_URL_BASE="https://ftp.iij.ad.jp/pub/linux/gentoo/releases/amd64/autobuilds/current-stage3-amd64-openrc"
-STAGE3_TAR_FILE="stage3-amd64-openrc-20260329T161601Z.tar.xz"
+STAGE3_LATEST_TXT="latest-stage3-amd64-openrc.txt"
 
 echo "============================================"
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') Gentoo ビルド開始"
@@ -36,23 +36,42 @@ fi
 mkdir -p "$BUILD_DIR"
 
 # ─────────────────────────────────────────────
-# 2. stage3 最新ファイルを自動取得
+# 2. stage3 最新ファイル名を自動取得
+#    latest-stage3-*.txt を読んでファイル名を解決する
 # ─────────────────────────────────────────────
-echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') stage3 ファイル名を取得中..."
+echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') stage3 最新ファイル名を取得中..."
 
-STAGE3_FILE=$(wget -qO- "${STAGE3_URL_BASE}/${STAGE3_TAR_FILE}")
+# コメント行・空行を除いた最初のパスからファイル名だけ抽出
+STAGE3_FILE=$(wget -qO- "${STAGE3_URL_BASE}/${STAGE3_LATEST_TXT}" \
+    | grep -v '^#' \
+    | grep -v '^$' \
+    | head -1 \
+    | awk '{print $1}' \
+    | xargs basename)
 
 if [[ -z "$STAGE3_FILE" ]]; then
     echo "[ERROR] stage3ファイル名の取得に失敗しました。"
+    echo "  URL: ${STAGE3_URL_BASE}/${STAGE3_LATEST_TXT}"
     exit 1
 fi
 
-STAGE3_PATH="/build/${STAGE3_FILE}"
-echo "[INFO] ダウンロード: ${STAGE3_FILE}"
-wget -c "${STAGE3_URL_BASE}/${STAGE3_FILE}" -O "$STAGE3_PATH"
+echo "[INFO] 最新 stage3: ${STAGE3_FILE}"
 
 # ─────────────────────────────────────────────
-# 3. stage3 展開（既に展開済みならスキップ）
+# 3. stage3 ダウンロード（再開対応 -c オプション）
+# ─────────────────────────────────────────────
+STAGE3_PATH="/build/${STAGE3_FILE}"
+
+if [[ -f "$STAGE3_PATH" ]]; then
+    echo "[INFO] キャッシュ済み: ${STAGE3_PATH}、ダウンロードをスキップ"
+else
+    echo "[INFO] ダウンロード中: ${STAGE3_FILE}"
+    wget -c "${STAGE3_URL_BASE}/${STAGE3_FILE}" -O "${STAGE3_PATH}.tmp"
+    mv "${STAGE3_PATH}.tmp" "$STAGE3_PATH"
+fi
+
+# ─────────────────────────────────────────────
+# 4. stage3 展開（既に展開済みならスキップ）
 # ─────────────────────────────────────────────
 if [[ ! -f "${BUILD_DIR}/bin/bash" ]]; then
     echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') 展開中..."
@@ -65,7 +84,7 @@ else
 fi
 
 # ─────────────────────────────────────────────
-# 4. chroot 用仮想FS マウント
+# 5. chroot 用仮想FS マウント
 # ─────────────────────────────────────────────
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') 仮想FS マウント中..."
 
@@ -87,7 +106,7 @@ mount_chroot
 cp /etc/resolv.conf "${BUILD_DIR}/etc/resolv.conf"
 
 # ─────────────────────────────────────────────
-# 5. chroot 内スクリプト生成
+# 6. chroot 内スクリプト生成
 # ─────────────────────────────────────────────
 cat > "${BUILD_DIR}/tmp/inside-chroot.sh" << INNEREOF
 #!/bin/bash
@@ -99,9 +118,9 @@ env-update && source /etc/profile
 echo "[CHROOT] make.conf 設定"
 cat > /etc/portage/make.conf << 'MAKEEOF'
 COMMON_FLAGS="-O2 -pipe -march=x86-64"
-CFLAGS="${COMMON_FLAGS}"
-CXXFLAGS="${COMMON_FLAGS}"
-MAKEOPTS="-j$(nproc) -l$(nproc)"
+CFLAGS="\${COMMON_FLAGS}"
+CXXFLAGS="\${COMMON_FLAGS}"
+MAKEOPTS="-j\$(nproc) -l\$(nproc)"
 USE="X wayland alsa pulseaudio"
 GENTOO_MIRRORS="https://distfiles.gentoo.org"
 ACCEPT_LICENSE="*"
@@ -150,19 +169,19 @@ INNEREOF
 chmod +x "${BUILD_DIR}/tmp/inside-chroot.sh"
 
 # ─────────────────────────────────────────────
-# 6. chroot 実行
+# 7. chroot 実行
 # ─────────────────────────────────────────────
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') chroot ビルド開始（数時間かかります）"
 chroot "$BUILD_DIR" /bin/bash /tmp/inside-chroot.sh
 
 # ─────────────────────────────────────────────
-# 7. アンマウント
+# 8. アンマウント
 # ─────────────────────────────────────────────
 cleanup
 trap - EXIT
 
 # ─────────────────────────────────────────────
-# 8. tar.gz 作成
+# 9. tar.gz 作成
 # ─────────────────────────────────────────────
 echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') tar.gz 作成中..."
 tar czpf "$OUTPUT_TAR" \
@@ -171,7 +190,7 @@ tar czpf "$OUTPUT_TAR" \
     gentoo-rootfs
 
 # ─────────────────────────────────────────────
-# 9. 完了フラグ
+# 10. 完了フラグ
 # ─────────────────────────────────────────────
 date '+%Y-%m-%d %H:%M:%S' > "$DONE_FLAG"
 

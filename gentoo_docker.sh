@@ -18,6 +18,7 @@ set -eo pipefail
 ROOT_PASSWORD="${ROOT_PASSWORD:-password}"
 MIRROR="${MIRROR:-https://ftp.iij.ad.jp/pub/linux/gentoo}"
 STAGE3_ARCH="${STAGE3_ARCH:-amd64}"
+
 LOCALE="${LOCALE:-ja_JP.UTF-8 UTF-8}"
 LOCALE_NAME="${LANG:-ja_JP.UTF-8}"
 
@@ -27,7 +28,12 @@ TZ="${TZ:-Asia/Tokyo}"
 WS="${WS:-build}"
 BUILD_DIR="/${WS}/gentoo-rootfs"
 OUTPUT_TAR="/${WS}/gentoo-rootfs.tar.gz"
-DONE_FLAG="/${WS}/.build_done"
+FLAG_DIR="/${WS}/FLAGS"
+PROFILE_FLAG="/${FLAG_DIR}/.profile_done"
+DONE_FLAG="/${FLAG_DIR}/.build_done"
+
+
+mkdir -p "${FLAG_DIR}"
 
 # stage3 パスを組み立て
 STAGE3_URL_BASE="${MIRROR}/releases/${STAGE3_ARCH}/autobuilds/current-stage3-${STAGE3_ARCH}-openrc"
@@ -146,36 +152,44 @@ ACCEPT_LICENSE="*"
 MAKEEOF
 
 echo "[CHROOT] 環境初期化"
-mkdir -p /etc/portage/repos.conf
-rm -rf /etc/portage/repos.conf
+if [[! -f "$PROFILE_FLAG" ]]; then
+    mkdir -p /etc/portage/repos.conf
+    rm -rf /etc/portage/repos.conf
+fi
+
 env-update && source /etc/profile
 
-echo "[CHROOT] emerge-webrsync"
-emerge-webrsync
+if [[! -f "$PROFILE_FLAG" ]]; then
+    echo "[CHROOT] emerge-webrsync"
+    emerge-webrsync
+fi
 
 echo "[CHROOT] emerge --sync (完全更新)"
 emerge --sync
 
-echo "[CHROOT] プロファイル設定"
-PROFILE_NUM=$(eselect profile list \
-    | grep 'default/linux/amd64/23.0 ' \
-    | grep -v 'split-usr\|selinux\|hardened\|musl\|x32' \
-    | head -1 \
-    | awk '{print $1}' \
-    | tr -d '[]')
-
-# 23.0が見つからない場合は安定版の標準プロファイルを自動選択
-if [[ -z "$PROFILE_NUM" ]]; then
+if [[! -f "$PROFILE_FLAG" ]]; then
+    echo "[CHROOT] プロファイル設定"
     PROFILE_NUM=$(eselect profile list \
-        | grep 'default/linux/amd64/' \
-        | grep -v 'split-usr\|selinux\|hardened\|musl\|x32\|developer\|desktop\|gnome\|plasma\|systemd' \
+        | grep 'default/linux/amd64/23.0 ' \
+        | grep -v 'split-usr\|selinux\|hardened\|musl\|x32' \
         | head -1 \
         | awk '{print $1}' \
         | tr -d '[]')
+
+    # 23.0が見つからない場合は安定版の標準プロファイルを自動選択
+    if [[ -z "$PROFILE_NUM" ]]; then
+        PROFILE_NUM=$(eselect profile list \
+            | grep 'default/linux/amd64/' \
+            | grep -v 'split-usr\|selinux\|hardened\|musl\|x32\|developer\|desktop\|gnome\|plasma\|systemd' \
+            | head -1 \
+            | awk '{print $1}' \
+            | tr -d '[]')
+    fi
+
+    echo "[CHROOT] 選択プロファイル番号: ${PROFILE_NUM}"
+    eselect profile set "${PROFILE_NUM}"
 fi
 
-echo "[CHROOT] 選択プロファイル番号: ${PROFILE_NUM}"
-eselect profile set "${PROFILE_NUM}"
 eselect profile show
 
 echo "[CHROOT] @world アップデート (最長工程)"
@@ -191,12 +205,13 @@ emerge \
     app-editors/nano \
     dev-vcs/git
 
-mkdir -p /etc/portage/repos.conf
-mkdir -p /var/db/repos/gentoo
-rm -rf /var/db/repos/gentoo/*
-chown -R portage:portage /var/db/repos/gentoo
+if [[! -f "$PROFILE_FLAG" ]]; then
+    mkdir -p /etc/portage/repos.conf
+    mkdir -p /var/db/repos/gentoo
+    rm -rf /var/db/repos/gentoo/*
+    chown -R portage:portage /var/db/repos/gentoo
 
-cat > /etc/portage/repos.conf/gentoo.conf << GITSYNCEOF
+    cat > /etc/portage/repos.conf/gentoo.conf << GITSYNCEOF
 [DEFAULT]
 main-repo = gentoo
 
@@ -208,10 +223,15 @@ sync-depth = 1
 sync-git-verify-commit-signature = yes
 sync-openpgp-key-path = /usr/share/openpgp-keys/gentoo-release.asc
 auto-sync = yes
+
 GITSYNCEOF
 
-echo "[CHROOT] emerge --sync (git更新)"
-emerge --sync
+    echo "[CHROOT] emerge --sync (git更新)"
+    emerge --sync
+fi
+
+date '+%Y-%m-%d %H:%M:%S' > "$PROFILE_FLAG"
+
 
 echo "[CHROOT] dhcpcd 自動起動登録"
 rc-update add dhcpcd default

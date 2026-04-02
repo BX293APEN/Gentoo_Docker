@@ -30,10 +30,9 @@ BUILD_DIR="/${WS}/gentoo-rootfs"
 OUTPUT_TAR="/${WS}/gentoo-rootfs.tar.gz"
 FLAG_DIR="/${WS}/FLAGS"
 PROFILE_FLAG="/${FLAG_DIR}/.profile_done"
+UPDATE_FLAG="/${FLAG_DIR}/.update_done"
 DONE_FLAG="/${FLAG_DIR}/.build_done"
 
-
-mkdir -p "${FLAG_DIR}"
 
 # stage3 パスを組み立て
 STAGE3_URL_BASE="${MIRROR}/releases/${STAGE3_ARCH}/autobuilds/current-stage3-${STAGE3_ARCH}-openrc"
@@ -59,6 +58,7 @@ fi
 # 1. 作業ディレクトリ準備
 # ─────────────────────────────────────────────
 mkdir -p "$BUILD_DIR"
+mkdir -p "${FLAG_DIR}"
 
 # ─────────────────────────────────────────────
 # 2. stage3 最新ファイル名を自動取得
@@ -164,8 +164,12 @@ if [[ ! -f "$PROFILE_FLAG" ]]; then
     emerge-webrsync
 fi
 
-echo "[CHROOT] emerge --sync (完全更新)"
-emerge --sync
+if [[ ! -f "$UPDATE_FLAG" ]]; then
+    echo "[CHROOT] emerge --sync (完全更新)"
+    emerge --sync
+fi
+
+date '+%Y-%m-%d %H:%M:%S' > "$UPDATE_FLAG"
 
 if [[ ! -f "$PROFILE_FLAG" ]]; then
     echo "[CHROOT] プロファイル設定"

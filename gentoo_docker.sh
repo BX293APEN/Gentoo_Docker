@@ -160,6 +160,8 @@ if [[ ! -f "/etc/portage/repos.conf" ]]; then
     emerge-webrsync
 fi
 
+mkdir -p "__FLAG_DIR__"
+
 if [[ ! -f "__UPDATE_FLAG__" ]]; then
     echo "[CHROOT] emerge --sync (完全更新)"
     emerge --sync
@@ -262,6 +264,7 @@ sed -i \
     -e "s|__STAGE3_ARCH__|${STAGE3_ARCH}|g" \
     -e "s|__VERSION__|${VERSION}|g" \
     -e "s|__CPU_CORE__|${CPU_CORE}|g" \
+    -e "s|__FLAG_DIR__|${FLAG_DIR}|g" \
     "${BUILD_DIR}/tmp/inside-chroot.sh"
 
 chmod +x "${BUILD_DIR}/tmp/inside-chroot.sh"

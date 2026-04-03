@@ -134,7 +134,7 @@ env-update && source /etc/profile
 rm -f /var/db/repos/gentoo/metadata/timestamp.*
 mkdir -p /var/db/repos/gentoo/
 
-if [[ ! -f "/etc/portage/repos.conf" ]]; then
+if [[ ! -e "/etc/portage/repos.conf" ]]; then
     echo "[CHROOT] emerge-webrsync"
     emerge-webrsync
 fi
@@ -248,7 +248,7 @@ emerge \
     app-editors/nano \
     dev-vcs/git
 
-if [[ ! -f "/etc/portage/repos.conf" ]]; then
+if [[ ! -e "/etc/portage/repos.conf" ]]; then
     mkdir -p /etc/portage/repos.conf
     mkdir -p /var/db/repos/gentoo
     rm -rf /var/db/repos/gentoo/*

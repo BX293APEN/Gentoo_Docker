@@ -50,7 +50,9 @@ fi
 if [ -n "$CURRENT_MP" ]; then
     echo "[INFO] アンマウントします"
     while IFS= read -r mp; do
-        umount "$mp"
+        if [ -n "$mp" ]; then
+            umount "$mp"
+        fi
     done <<< "$CURRENT_MP"
 fi
 

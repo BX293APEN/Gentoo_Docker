@@ -32,7 +32,6 @@ WS="${WS:-build}"
 BUILD_DIR="/${WS}/gentoo-rootfs"
 OUTPUT_TAR="/${WS}/gentoo-rootfs.tar.gz"
 FLAG_DIR="/${WS}/FLAGS"
-UPDATE_FLAG="${FLAG_DIR}/.update_done"
 DONE_FLAG="${FLAG_DIR}/.build_done"
 
 STAGE3_URL_BASE="${MIRROR}/releases/${STAGE3_ARCH}/autobuilds/current-stage3-${STAGE3_ARCH}-openrc"
@@ -140,8 +139,6 @@ if [[ ! -f "/etc/portage/repos.conf" ]]; then
     emerge-webrsync
 fi
 
-mkdir -p "__FLAG_DIR__"
-
 # ─────────────────────────────────────────────
 # emerge --sync リトライループ
 # profiles.desc が生成されるまで最大 SYNC_MAX_RETRY 回試行
@@ -168,7 +165,6 @@ until [[ -f "${PROFILES_DESC}" ]]; do
 done
 
 echo "[CHROOT] emerge --sync 完了 (試行 ${SYNC_TRY} 回)"
-date '+%Y-%m-%d %H:%M:%S' > "__UPDATE_FLAG__"
 
 echo "[CHROOT] プロファイル設定"
 echo "[CHROOT][DEBUG] eselect profile list の出力:"
@@ -223,7 +219,7 @@ fi
 eselect profile show
 
 # ─────────────────────────────────────────────
-# [FIX 2] @world アップデート
+# @world アップデート
 # --with-bdeps=y を除去（初回フルビルドでは依存が膨大になり失敗しやすい）
 # --keep-going 追加（一部パッケージ失敗でビルド全体が止まるのを防ぐ）
 # ─────────────────────────────────────────────
@@ -300,11 +296,9 @@ sed -i \
     -e "s|__TZ__|${TZ}|g" \
     -e "s|__LOCALE__|${LOCALE}|g" \
     -e "s|__LOCALE_NAME__|${LOCALE_NAME}|g" \
-    -e "s|__UPDATE_FLAG__|${UPDATE_FLAG}|g" \
     -e "s|__STAGE3_ARCH__|${STAGE3_ARCH}|g" \
     -e "s|__VERSION__|${VERSION}|g" \
     -e "s|__CPU_CORE__|${CPU_CORE}|g" \
-    -e "s|__FLAG_DIR__|${FLAG_DIR}|g" \
     "${BUILD_DIR}/tmp/inside-chroot.sh"
 
 chmod +x "${BUILD_DIR}/tmp/inside-chroot.sh"

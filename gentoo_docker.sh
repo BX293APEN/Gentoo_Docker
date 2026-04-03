@@ -131,13 +131,22 @@ MAKEEOF
 echo "[CHROOT] 環境初期化"
 env-update && source /etc/profile
 
-echo "[CHROOT] プロファイル設定"
-# gentoo-kernel が initramfs USE を要求 → installkernel に dracut USE を付与
+echo "[CHROOT] ディレクトリ設定"
 mkdir -p /etc/portage/package.use
-echo ">=sys-kernel/installkernel-0 dracut" >> /etc/portage/package.use/kernel
-echo "sys-apps/systemd-utils boot kernel-install" >> /etc/portage/package.use/kernel
-
 mkdir -p /boot 
+mkdir -p /etc/portage/savedconfig/sys-kernel
+mkdir -p /etc/portage/package.license
+
+echo "[CHROOT] ファイル設定"
+touch /etc/portage/savedconfig/sys-kernel/linux-firmware  # 空ファイル = ファームウェアなし
+
+echo "[CHROOT] プロファイル設定"
+echo ">=sys-kernel/installkernel-0 dracut" > /etc/portage/package.use/kernel
+echo "sys-apps/systemd-utils boot kernel-install" >> /etc/portage/package.use/kernel
+echo "sys-kernel/linux-firmware savedconfig" >> /etc/portage/package.use/kernel
+
+echo "[CHROOT] ライセンス設定"
+echo "sys-kernel/linux-firmware linux-fw-redistributable" > /etc/portage/package.license/kernel
 
 
 rm -f /var/db/repos/gentoo/metadata/timestamp.*
@@ -240,10 +249,10 @@ emerge \
     --with-bdeps=y \
     --keep-going \
     @world
+    
 
-echo "[CHROOT] カーネル・必須パッケージ インストール"
-
-
+echo "[EMERGE] ファームウェア インストール開始"
+emerge sys-kernel/linux-firmware
 
 echo "[EMERGE] カーネル インストール開始"
 emerge sys-kernel/gentoo-kernel-bin

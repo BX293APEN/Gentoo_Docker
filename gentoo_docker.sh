@@ -167,56 +167,46 @@ done
 echo "[CHROOT] emerge --sync 完了 (試行 ${SYNC_TRY} 回)"
 
 echo "[CHROOT] プロファイル設定"
-echo "[CHROOT][DEBUG] eselect profile list の出力:"
-eselect profile list
 
-CURRENT_PROFILE="$(eselect profile show 2>/dev/null || true)"
-echo "[CHROOT][DEBUG] 現在のプロファイル: ${CURRENT_PROFILE}"
+# ─────────────────────────────────────────────
+# eselect を使わず profiles.desc を直接パースして ln -snf する
+# eselect は /etc/portage/make.profile が profiles.desc の既知エントリと
+# 一致しないと "Failed to get a list of valid profiles" で死ぬため、
+# make.profile に直接リンクを張る（eselect profile set の内部実装と等価）
+# ─────────────────────────────────────────────
+PROFILES_DESC="/var/db/repos/gentoo/profiles/profiles.desc"
 
-TARGET_PROFILE="default/linux/__STAGE3_ARCH__/__VERSION__"
+echo "[CHROOT][DEBUG] make.profile の現在のリンク先:"
+ls -la /etc/portage/make.profile 2>/dev/null || echo "(存在しません)"
 
-if [[ "${CURRENT_PROFILE}" != *"${TARGET_PROFILE}"* ]]; then
+# profiles.desc のフォーマット: <relpath> <arch> <status>
+# 優先: __STAGE3_ARCH__/__VERSION__ の標準プロファイル
+# 次点: __STAGE3_ARCH__ の標準プロファイル（versionが見つからない場合）
+PROFILE_RELPATH=$(grep "default/linux/__STAGE3_ARCH__/__VERSION__" "${PROFILES_DESC}" \
+    | grep -v 'split-usr\|selinux\|hardened\|musl\|x32' \
+    | head -1 \
+    | awk '{print $1}')
 
-    # 番号より確実なパス文字列での直接指定を先に試みる
-    PROFILE_PATH=$(eselect profile list \
-        | grep "default/linux/__STAGE3_ARCH__/__VERSION__" \
-        | grep -v 'split-usr\|selinux\|hardened\|musl\|x32' \
+if [[ -z "${PROFILE_RELPATH}" ]]; then
+    echo "[CHROOT][WARN] __VERSION__ プロファイルが見つからず。安定版標準プロファイルにフォールバック"
+    PROFILE_RELPATH=$(grep "default/linux/__STAGE3_ARCH__/" "${PROFILES_DESC}" \
+        | grep -v 'split-usr\|selinux\|hardened\|musl\|x32\|developer\|desktop\|gnome\|plasma\|systemd' \
         | head -1 \
-        | grep -oP 'default/linux/\S+')
-
-    if [[ -n "${PROFILE_PATH}" ]]; then
-        echo "[CHROOT] プロファイルをパス指定で設定: ${PROFILE_PATH}"
-        eselect profile set "${PROFILE_PATH}"
-    else
-        # パス取得失敗時は番号で fallback
-        PROFILE_NUM=$(eselect profile list \
-            | grep "default/linux/__STAGE3_ARCH__/__VERSION__" \
-            | grep -v 'split-usr\|selinux\|hardened\|musl\|x32' \
-            | head -1 \
-            | awk '{print $1}' \
-            | tr -d '[]')
-
-        if [[ -z "${PROFILE_NUM}" ]]; then
-            PROFILE_NUM=$(eselect profile list \
-                | grep "default/linux/__STAGE3_ARCH__/" \
-                | grep -v 'split-usr\|selinux\|hardened\|musl\|x32\|developer\|desktop\|gnome\|plasma\|systemd' \
-                | head -1 \
-                | awk '{print $1}' \
-                | tr -d '[]')
-        fi
-
-        if [[ -z "${PROFILE_NUM}" ]]; then
-            echo "[ERROR] プロファイルが見つかりませんでした。利用可能一覧:"
-            eselect profile list
-            exit 1
-        fi
-
-        echo "[CHROOT] 選択プロファイル番号: ${PROFILE_NUM}"
-        eselect profile set "${PROFILE_NUM}"
-    fi
+        | awk '{print $1}')
 fi
 
-eselect profile show
+if [[ -z "${PROFILE_RELPATH}" ]]; then
+    echo "[ERROR] プロファイルが見つかりませんでした。profiles.desc の内容:"
+    cat "${PROFILES_DESC}"
+    exit 1
+fi
+
+PROFILE_ABS="/var/db/repos/gentoo/profiles/${PROFILE_RELPATH}"
+echo "[CHROOT] プロファイルを設定: ${PROFILE_ABS}"
+ln -snf "${PROFILE_ABS}" /etc/portage/make.profile
+
+echo "[CHROOT][DEBUG] 設定後のプロファイル:"
+ls -la /etc/portage/make.profile
 
 # ─────────────────────────────────────────────
 # @world アップデート

@@ -240,8 +240,13 @@ mkdir -p /etc/portage/package.use
 echo ">=sys-kernel/installkernel-0 dracut" >> /etc/portage/package.use/kernel
 echo "sys-apps/systemd-utils boot" >> /etc/portage/package.use/kernel
 
+mkdir -p /boot 
+
+echo "[EMERGE] カーネル インストール開始"
+emerge sys-kernel/gentoo-kernel-bin
+
+echo "[EMERGE] パッケージ インストール開始"
 emerge \
-    sys-kernel/gentoo-kernel-bin \
     net-misc/dhcpcd \
     app-admin/sudo \
     sys-boot/grub \
@@ -249,7 +254,9 @@ emerge \
     app-editors/nano \
     dev-vcs/git
 
+
 if [[ ! -e "/etc/portage/repos.conf" ]]; then
+    echo "[CHROOT] 設定変更"
     mkdir -p /etc/portage/repos.conf
     mkdir -p /var/db/repos/gentoo
     rm -rf /var/db/repos/gentoo/*

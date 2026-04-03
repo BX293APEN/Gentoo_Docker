@@ -131,6 +131,15 @@ MAKEEOF
 echo "[CHROOT] 環境初期化"
 env-update && source /etc/profile
 
+echo "[CHROOT] プロファイル設定"
+# gentoo-kernel が initramfs USE を要求 → installkernel に dracut USE を付与
+mkdir -p /etc/portage/package.use
+echo ">=sys-kernel/installkernel-0 dracut" >> /etc/portage/package.use/kernel
+echo "sys-apps/systemd-utils boot kernel-install" >> /etc/portage/package.use/kernel
+
+mkdir -p /boot 
+
+
 rm -f /var/db/repos/gentoo/metadata/timestamp.*
 mkdir -p /var/db/repos/gentoo/
 
@@ -166,7 +175,6 @@ done
 
 echo "[CHROOT] emerge --sync 完了 (試行 ${SYNC_TRY} 回)"
 
-echo "[CHROOT] プロファイル設定"
 
 # ─────────────────────────────────────────────
 # eselect を使わず profiles.desc を直接パースして ln -snf する
@@ -235,12 +243,7 @@ emerge \
 
 echo "[CHROOT] カーネル・必須パッケージ インストール"
 
-# gentoo-kernel が initramfs USE を要求 → installkernel に dracut USE を付与
-mkdir -p /etc/portage/package.use
-echo ">=sys-kernel/installkernel-0 dracut" >> /etc/portage/package.use/kernel
-echo "sys-apps/systemd-utils boot kernel-install" >> /etc/portage/package.use/kernel
 
-mkdir -p /boot 
 
 echo "[EMERGE] カーネル インストール開始"
 emerge sys-kernel/gentoo-kernel-bin

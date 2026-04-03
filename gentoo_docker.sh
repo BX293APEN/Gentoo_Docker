@@ -182,17 +182,18 @@ ls -la /etc/portage/make.profile 2>/dev/null || echo "(存在しません)"
 # profiles.desc のフォーマット: <relpath> <arch> <status>
 # 優先: __STAGE3_ARCH__/__VERSION__ の標準プロファイル
 # 次点: __STAGE3_ARCH__ の標準プロファイル（versionが見つからない場合）
+# profiles.desc フォーマット: <arch>  <relpath>  <status>  → パスは $2
 PROFILE_RELPATH=$(grep "default/linux/__STAGE3_ARCH__/__VERSION__" "${PROFILES_DESC}" \
     | grep -v 'split-usr\|selinux\|hardened\|musl\|x32' \
     | head -1 \
-    | awk '{print $1}')
+    | awk '{print $2}')
 
 if [[ -z "${PROFILE_RELPATH}" ]]; then
     echo "[CHROOT][WARN] __VERSION__ プロファイルが見つからず。安定版標準プロファイルにフォールバック"
     PROFILE_RELPATH=$(grep "default/linux/__STAGE3_ARCH__/" "${PROFILES_DESC}" \
         | grep -v 'split-usr\|selinux\|hardened\|musl\|x32\|developer\|desktop\|gnome\|plasma\|systemd' \
         | head -1 \
-        | awk '{print $1}')
+        | awk '{print $2}')
 fi
 
 if [[ -z "${PROFILE_RELPATH}" ]]; then

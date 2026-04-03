@@ -142,21 +142,33 @@ fi
 
 mkdir -p "__FLAG_DIR__"
 
-echo "[CHROOT] emerge --sync (完全更新)"
-emerge --sync
-
-date '+%Y-%m-%d %H:%M:%S' > "__UPDATE_FLAG__"
-
 # ─────────────────────────────────────────────
-# [FIX 1] profiles.desc の存在を emerge --sync 完了後に確認
-# emerge --sync が成功していれば必ず存在する
+# emerge --sync リトライループ
+# profiles.desc が生成されるまで最大 SYNC_MAX_RETRY 回試行
 # ─────────────────────────────────────────────
 PROFILES_DESC="/var/db/repos/gentoo/profiles/profiles.desc"
-if [[ ! -f "${PROFILES_DESC}" ]]; then
-    echo "[ERROR] profiles.desc が見つかりません: ${PROFILES_DESC}"
-    echo "  emerge --sync が正常に完了していない可能性があります。"
-    exit 1
-fi
+SYNC_MAX_RETRY=5
+SYNC_RETRY_WAIT=30
+SYNC_TRY=0
+
+until [[ -f "${PROFILES_DESC}" ]]; do
+    SYNC_TRY=$(( SYNC_TRY + 1 ))
+    if (( SYNC_TRY > SYNC_MAX_RETRY )); then
+        echo "[ERROR] emerge --sync が ${SYNC_MAX_RETRY} 回失敗しました。中断します。"
+        exit 1
+    fi
+
+    echo "[CHROOT] emerge --sync (試行 ${SYNC_TRY}/${SYNC_MAX_RETRY})"
+    emerge --sync || true   # 失敗しても until 条件で判定するので exit させない
+
+    if [[ ! -f "${PROFILES_DESC}" ]]; then
+        echo "[WARN] profiles.desc が未生成。${SYNC_RETRY_WAIT}秒後にリトライします..."
+        sleep "${SYNC_RETRY_WAIT}"
+    fi
+done
+
+echo "[CHROOT] emerge --sync 完了 (試行 ${SYNC_TRY} 回)"
+date '+%Y-%m-%d %H:%M:%S' > "__UPDATE_FLAG__"
 
 echo "[CHROOT] プロファイル設定"
 echo "[CHROOT][DEBUG] eselect profile list の出力:"

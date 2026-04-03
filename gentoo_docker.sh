@@ -214,12 +214,22 @@ ls -la /etc/portage/make.profile
 # --with-bdeps=y を除去（初回フルビルドでは依存が膨大になり失敗しやすい）
 # --keep-going 追加（一部パッケージ失敗でビルド全体が止まるのを防ぐ）
 # ─────────────────────────────────────────────
-echo "[CHROOT] @world アップデート (最長工程)"
+echo "[CHROOT] @world アップデート 1回目 (パッケージ本体)"
 emerge \
     --verbose \
     --update \
     --deep \
     --newuse \
+    --keep-going \
+    @world
+
+echo "[CHROOT] @world アップデート 2回目 (ビルドツール類を含む完全更新)"
+emerge \
+    --verbose \
+    --update \
+    --deep \
+    --newuse \
+    --with-bdeps=y \
     --keep-going \
     @world
 

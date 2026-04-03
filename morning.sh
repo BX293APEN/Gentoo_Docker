@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =============================================================================
 # morning.sh  ―  朝起きたら実行（ホストUbuntu上で sudo bash morning.sh）
 # 役割: gentoo-rootfs.tar.gz を USB に展開して起動可能にする
@@ -14,8 +14,18 @@
 
 set -euo pipefail
 
-# ★ここだけ書き換えてください★
-USB_DEV="/dev/sdX"   # 例: /dev/sdb  /dev/sdc
+echo "デバイスを選んでください："
+lsblk -po NAME,SIZE,LABEL,MOUNTPOINT | head -n1 && \
+lsblk -po NAME,SIZE,LABEL,MOUNTPOINT | grep -E '^(/dev/sd|/dev/nvme)|^├─|^└─'
+
+echo -n "USBデバイス (例: sdb or /dev/sdb) : "
+read INPUT
+
+# /dev/付きでも無しでもOKにする
+USB_DEV="/dev/${INPUT#/dev/}"
+
+CURRENT_MP=$(lsblk -no MOUNTPOINT "$USB_DEV")
+
 # ──────────────────────────────
 
 ROOTFS_TAR="./build/gentoo-rootfs.tar.gz"
@@ -35,6 +45,15 @@ if [[ "$EUID" -ne 0 ]]; then
     echo "[ERROR] root権限が必要です: sudo bash morning.sh"
     exit 1
 fi
+
+# すでにマウントされてたらアンマウント
+if [ -n "$CURRENT_MP" ]; then
+    echo "[INFO] アンマウントします"
+    while IFS= read -r mp; do
+        umount "$mp"
+    done <<< "$CURRENT_MP"
+fi
+
 
 if [[ "$USB_DEV" == "/dev/sdX" ]]; then
     echo "[ERROR] USB_DEV が未設定です。スクリプト冒頭の USB_DEV を書き換えてください。"

@@ -224,6 +224,11 @@ emerge \
     @world
 
 echo "[CHROOT] カーネル・必須パッケージ インストール"
+
+# gentoo-kernel が initramfs USE を要求 → installkernel に dracut USE を付与
+mkdir -p /etc/portage/package.use
+echo ">=sys-kernel/installkernel-0 dracut" >> /etc/portage/package.use/kernel
+
 emerge \
     sys-kernel/gentoo-kernel \
     net-misc/dhcpcd \

@@ -136,6 +136,7 @@ mkdir -p /etc/portage/package.use
 mkdir -p /boot 
 mkdir -p /etc/portage/savedconfig/sys-kernel
 mkdir -p /etc/portage/package.license
+mkdir -p /etc/kernel/preinst.d/
 
 echo "[CHROOT] ファイル設定"
 touch /etc/portage/savedconfig/sys-kernel/linux-firmware  # 空ファイル = ファームウェアなし

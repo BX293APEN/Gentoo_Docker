@@ -139,6 +139,7 @@ mkdir -p /etc/portage/package.license
 
 echo "[CHROOT] ファイル設定"
 touch /etc/portage/savedconfig/sys-kernel/linux-firmware  # 空ファイル = ファームウェアなし
+touch /etc/kernel/preinst.d/05-check-chroot.install
 
 echo "[CHROOT] プロファイル設定"
 echo ">=sys-kernel/installkernel-0 dracut" > /etc/portage/package.use/kernel

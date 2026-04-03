@@ -238,7 +238,7 @@ echo "[CHROOT] カーネル・必須パッケージ インストール"
 # gentoo-kernel が initramfs USE を要求 → installkernel に dracut USE を付与
 mkdir -p /etc/portage/package.use
 echo ">=sys-kernel/installkernel-0 dracut" >> /etc/portage/package.use/kernel
-echo "sys-apps/systemd-utils boot" >> /etc/portage/package.use/kernel
+echo "sys-apps/systemd-utils boot kernel-install" >> /etc/portage/package.use/kernel
 
 mkdir -p /boot 
 
